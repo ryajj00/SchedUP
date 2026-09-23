@@ -1,0 +1,104 @@
+import React from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { Course, CourseConflict } from '../types/schedule';
+import { AppTheme, lightTheme } from '../theme';
+import { formatTimeRange } from '../utils/timeUtils';
+
+interface CourseCardProps {
+  course: Course;
+  conflicts: CourseConflict[];
+  theme?: AppTheme;
+  onPress?: () => void;
+}
+
+export function CourseCard({ course, conflicts, theme = lightTheme, onPress }: CourseCardProps) {
+  const isConflicting = conflicts.some(
+    (conflict) => conflict.courseAId === course.id || conflict.courseBId === course.id,
+  );
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.card,
+        { backgroundColor: theme.surface, borderColor: theme.cardStroke },
+        isConflicting && { backgroundColor: theme.dangerSoft, borderColor: theme.danger },
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={`${course.courseName}, ${course.days.join(', ')}, ${formatTimeRange(course.startTime, course.endTime)}${isConflicting ? ', conflict with another course' : ''}`}
+    >
+      <View style={styles.headerRow}>
+        <View style={[styles.badgeContainer, { backgroundColor: theme.primarySoft }]}>
+          <Text style={[styles.badge, { color: theme.primary }]}>{course.source === 'scan' ? 'AI' : 'Manual'}</Text>
+        </View>
+        {isConflicting ? <Text style={styles.warning}>⚠</Text> : null}
+      </View>
+
+      <Text style={[styles.title, { color: theme.text }]}>{course.courseName}</Text>
+      <Text style={[styles.meta, { color: theme.textSoft }]}>{course.days.join(' • ')}</Text>
+      <Text style={[styles.meta, { color: theme.textSoft }]}>{formatTimeRange(course.startTime, course.endTime)}</Text>
+
+      {isConflicting ? (
+        <Text style={[styles.warningText, { color: theme.danger }]}>Conflict detected</Text>
+      ) : (
+        <Text style={[styles.safeText, { color: theme.success }]}>On track</Text>
+      )}
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F4',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  badgeContainer: {
+    backgroundColor: '#EEF4FF',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  badge: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '800',
+    flexShrink: 1,
+    marginBottom: 4,
+  },
+  meta: {
+    fontSize: 14,
+    marginTop: 2,
+  },
+  warning: {
+    fontSize: 18,
+    marginLeft: 8,
+  },
+  warningText: {
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 10,
+  },
+  safeText: {
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 10,
+  },
+});
