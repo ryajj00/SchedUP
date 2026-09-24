@@ -1,16 +1,16 @@
 import { ScannedCourse } from '../types/schedule';
 
-const API_URL = 'http://localhost:3000/api/scan-schedule';
+const API_URL = `${process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000'}/api/scan-schedule`;
 
-export async function scanSchedule(imageUri: string): Promise<ScannedCourse[]> {
+export async function scanSchedule(imageDataUrl: string, mimeType = 'image/jpeg'): Promise<ScannedCourse[]> {
   const response = await fetch(API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      image: imageUri,
-      mimeType: 'image/jpeg',
+      image: imageDataUrl,
+      mimeType,
     }),
   });
 

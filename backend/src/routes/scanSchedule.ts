@@ -1,7 +1,7 @@
 import { Request, Response, Router } from 'express';
 import { z } from 'zod';
 
-import { MockProvider } from '../services/ai/mockProvider';
+import { createAIProvider } from '../services/ai/providerFactory';
 import { validateImageFromDataUrl } from '../utils/imageValidation';
 import { scanResponseSchema } from '../validators/scheduleSchema';
 
@@ -41,7 +41,7 @@ router.post('/api/scan-schedule', async (req: Request, res: Response) => {
     const parsedBody = requestBodySchema.parse(req.body ?? {});
     const { validatedMimeType } = validateImageFromDataUrl(parsedBody.image, parsedBody.mimeType);
 
-    const provider = new MockProvider();
+    const provider = createAIProvider();
     const rawResponse = await provider.extractScheduleFromImage(parsedBody.image);
     const validatedResponse = scanResponseSchema.parse(rawResponse);
 

@@ -22,15 +22,15 @@ export function CourseCard({ course, conflicts, theme = lightTheme, onPress }: C
       onPress={onPress}
       style={[
         styles.card,
-        { backgroundColor: theme.surface, borderColor: theme.cardStroke },
-        isConflicting && { backgroundColor: theme.dangerSoft, borderColor: theme.danger },
+        { backgroundColor: theme.surface, borderColor: 'transparent' },
+        isConflicting && { backgroundColor: theme.dangerSoft, borderColor: 'transparent' },
       ]}
       accessibilityRole="button"
       accessibilityLabel={`${course.courseName}, ${course.days.join(', ')}, ${formatTimeRange(course.startTime, course.endTime)}${isConflicting ? ', conflict with another course' : ''}`}
     >
       <View style={styles.headerRow}>
-        <View style={[styles.badgeContainer, { backgroundColor: theme.primarySoft }]}>
-          <Text style={[styles.badge, { color: theme.primary }]}>{course.source === 'scan' ? 'AI' : 'Manual'}</Text>
+        <View style={[styles.badgeContainer, { backgroundColor: isConflicting ? theme.danger : theme.primarySoft }]}>
+          <Text style={[styles.badge, { color: isConflicting ? '#FFFFFF' : theme.primary }]}>{course.courseName.slice(0, 5).toUpperCase()}</Text>
         </View>
         {isConflicting ? <Text style={styles.warning}>⚠</Text> : null}
       </View>
@@ -51,14 +51,12 @@ export function CourseCard({ course, conflicts, theme = lightTheme, onPress }: C
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 14,
+    borderRadius: 14,
+    padding: 16,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F4',
-    shadowColor: '#0F172A',
+    shadowColor: '#131B2E',
     shadowOpacity: 0.06,
-    shadowRadius: 10,
+    shadowRadius: 8,
     elevation: 2,
   },
   headerRow: {
@@ -78,8 +76,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   title: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
     flexShrink: 1,
     marginBottom: 4,
   },

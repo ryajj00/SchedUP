@@ -21,7 +21,11 @@ export function useSchedule() {
   }, []);
 
   useEffect(() => {
-    void loadSchedule();
+    const loadTimer = setTimeout(() => {
+      void loadSchedule();
+    }, 0);
+
+    return () => clearTimeout(loadTimer);
   }, [loadSchedule]);
 
   const addCourse = useCallback(
@@ -34,6 +38,18 @@ export function useSchedule() {
       const nextCourses = [...courses, newCourse];
       await persistSchedule(nextCourses);
       return newCourse;
+    },
+    [courses, persistSchedule],
+  );
+
+  const addCourses = useCallback(
+    async (courseInputs: Omit<Course, 'id'>[]) => {
+      const newCourses = courseInputs.map((course) => ({
+        ...course,
+        id: `course-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      }));
+      await persistSchedule([...courses, ...newCourses]);
+      return newCourses;
     },
     [courses, persistSchedule],
   );
@@ -67,6 +83,7 @@ export function useSchedule() {
     conflicts,
     isLoading,
     addCourse,
+    addCourses,
     updateCourse,
     deleteCourse,
     clearAll,

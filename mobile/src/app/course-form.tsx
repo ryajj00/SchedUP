@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, useColorScheme, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DaySelector } from '../components/DaySelector';
 import { useSchedule } from '../hooks/useSchedule';
@@ -17,6 +18,7 @@ const emptyForm = {
 
 export default function CourseFormScreen() {
   const scheme = useColorScheme();
+  const insets = useSafeAreaInsets();
   const theme = scheme === 'dark' ? darkTheme : lightTheme;
   const { courseId } = useLocalSearchParams<{ courseId?: string }>();
   const { courses, addCourse, updateCourse, deleteCourse } = useSchedule();
@@ -104,8 +106,17 @@ export default function CourseFormScreen() {
   };
 
   return (
-    <ScrollView style={StyleSheet.flatten([styles.container, { backgroundColor: theme.background }])} contentContainerStyle={styles.content}>
-      <Text style={[styles.title, { color: theme.text }]}>{existingCourse ? 'Edit Course' : 'Add Course'}</Text>
+    <ScrollView
+      style={StyleSheet.flatten([styles.container, { backgroundColor: theme.background }])}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + 16 }]}
+    >
+      <View style={styles.pageHeader}>
+        <View>
+          <Text style={[styles.title, { color: theme.text }]}>{existingCourse ? 'Edit Course' : 'Add Course'}</Text>
+          <Text style={[styles.subtitle, { color: theme.textSoft }]}>Update schedule details and avoid collisions.</Text>
+        </View>
+        {existingCourse ? <Text style={[styles.deleteIcon, { color: theme.danger }]}>⌫</Text> : null}
+      </View>
 
       <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.cardStroke }]}> 
         <Text style={[styles.label, { color: theme.textSoft }]}>Course name</Text>
@@ -165,9 +176,12 @@ export default function CourseFormScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 24, paddingBottom: 40 },
-  title: { fontSize: 28, fontWeight: '900', marginBottom: 20 },
-  card: { borderRadius: 24, padding: 18, borderWidth: 1 },
+  content: { padding: 16, paddingBottom: 40 },
+  pageHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  title: { fontSize: 25, fontWeight: '800' },
+  subtitle: { fontSize: 13, marginTop: 4 },
+  deleteIcon: { fontSize: 25, fontWeight: '800' },
+  card: { borderRadius: 16, padding: 18, borderWidth: 0, shadowColor: '#131B2E', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   label: { fontSize: 15, fontWeight: '800', marginBottom: 8 },
   input: { borderRadius: 14, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 12, marginBottom: 18, fontSize: 16 },
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 12 },

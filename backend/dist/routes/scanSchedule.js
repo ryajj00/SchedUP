@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const zod_1 = require("zod");
-const mockProvider_1 = require("../services/ai/mockProvider");
+const providerFactory_1 = require("../services/ai/providerFactory");
 const imageValidation_1 = require("../utils/imageValidation");
 const scheduleSchema_1 = require("../validators/scheduleSchema");
 const router = (0, express_1.Router)();
@@ -33,7 +33,7 @@ router.post('/api/scan-schedule', async (req, res) => {
     try {
         const parsedBody = requestBodySchema.parse(req.body ?? {});
         const { validatedMimeType } = (0, imageValidation_1.validateImageFromDataUrl)(parsedBody.image, parsedBody.mimeType);
-        const provider = new mockProvider_1.MockProvider();
+        const provider = (0, providerFactory_1.createAIProvider)();
         const rawResponse = await provider.extractScheduleFromImage(parsedBody.image);
         const validatedResponse = scheduleSchema_1.scanResponseSchema.parse(rawResponse);
         const normalizedCourses = validatedResponse.courses.map((course) => ({

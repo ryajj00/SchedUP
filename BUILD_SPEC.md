@@ -17,6 +17,25 @@ SchedUP supports two ways of adding courses:
 
 The application displays courses in a mobile-friendly weekly schedule and automatically identifies overlapping classes.
 
+## Current Implementation Status
+
+The current MVP implementation includes:
+
+- Expo Router navigation with Schedule, Scan, Profile, and Settings tabs
+- Manual course creation, editing, and deletion
+- Local schedule persistence with AsyncStorage
+- Time validation and client-side conflict detection
+- Schedule filters for All, Today, Week, and Conflicts
+- Timetable image selection from the gallery or camera
+- Image preview, backend scan review, uncertainty indicators, and user-confirmed import
+- Persisted light/dark theme preference
+- Stitch-based Settings screen with persisted time format, conflict-engine, transit-buffer, and duplicate-import preferences
+- Two-step local schedule reset action
+- Backend request validation, image validation, rate limiting, and AI response validation
+- Configurable mock and OpenAI vision providers
+
+Remaining roadmap items are individual scanned-course editing/removal, applying duplicate preferences during import, Claude provider support, export/calendar actions, and production deployment/authentication.
+
 ## Target Platforms
 
 - iOS 16+
@@ -167,10 +186,9 @@ Use:
 - React Native
 - Expo managed workflow
 - TypeScript
-- React Navigation
+- Expo Router
 - AsyncStorage
 - expo-image-picker
-- expo-camera if useful
 - React Native StyleSheet or NativeWind
 
 Prefer TypeScript throughout the project.
@@ -199,7 +217,9 @@ Use a vision-capable AI API.
 Possible providers:
 
 - OpenAI
-- Anthropic Claude
+- Anthropic Claude (planned; provider slot reserved)
+
+The current backend supports `mock` for deterministic local development and `openai` for vision extraction. Configure the provider with `AI_PROVIDER`; provider credentials remain server-side.
 
 Provider-specific code must remain behind the backend service layer.
 
@@ -1038,19 +1058,15 @@ Tue
 Needs review
 ```
 
-Each course should support:
-
-- Edit
-- Remove
-- Confirm
+The current MVP displays each extracted course for review and shows uncertainty details before import. Individual edit/remove controls remain roadmap work.
 
 Provide:
 
 ```text
-Confirm All
+Add courses to schedule
 ```
 
-only after the user has an opportunity to review the results.
+only after the user has an opportunity to review the results. Confirmation imports the reviewed courses into the persisted schedule.
 
 ---
 
@@ -1164,6 +1180,14 @@ saveSchedule(courses: Course[]): Promise<void>;
 clearSchedule(): Promise<void>;
 ```
 
+The current implementation also stores theme preferences under:
+
+```text
+@schedUp/preferences
+```
+
+Preferences include a `themeMode` value of `system`, `light`, or `dark`.
+
 ---
 
 # 31. Storage Error Handling
@@ -1212,7 +1236,7 @@ Keep the actual conflict algorithm in `utils/conflictDetection.ts`.
 
 # 33. Navigation
 
-Use React Navigation.
+Use Expo Router.
 
 Recommended structure:
 
@@ -1505,7 +1529,7 @@ Implement incrementally.
 
 - Expo
 - TypeScript
-- React Navigation
+- Expo Router
 - folder structure
 - base theme/styles
 
@@ -1554,9 +1578,10 @@ Do not build AI yet.
 ## Phase 8 — Image Input
 
 - gallery
-- camera if needed
+- camera
 - preview
 - image validation
+- base64 image preparation for backend submission
 
 ## Phase 9 — Secure Backend
 
@@ -1577,10 +1602,10 @@ Do not build AI yet.
 
 - extracted course list
 - uncertainty indicators
-- editing
-- removal
-- confirmation
-- duplicate detection
+- user confirmation before import
+- import into the persisted schedule
+- editing and removal (roadmap)
+- duplicate detection (roadmap)
 
 ## Phase 12 — Hardening
 
@@ -1657,41 +1682,41 @@ Before considering the implementation complete, verify:
 
 ## Mobile
 
-- [ ] React Native + Expo
-- [ ] TypeScript
-- [ ] React Navigation
-- [ ] AsyncStorage
-- [ ] Manual course entry
-- [ ] Course editing
-- [ ] Course deletion
-- [ ] Multi-day selection
-- [ ] Time validation
-- [ ] Weekly schedule
-- [ ] Conflict detection
-- [ ] Scan review
-- [ ] Image selection
-- [ ] Permission handling
+- [x] React Native + Expo
+- [x] TypeScript
+- [x] Expo Router
+- [x] AsyncStorage
+- [x] Manual course entry
+- [x] Course editing
+- [x] Course deletion
+- [x] Multi-day selection
+- [x] Time validation
+- [x] Weekly schedule
+- [x] Conflict detection
+- [x] Scan review
+- [x] Image selection
+- [x] Permission handling
 
 ## Backend
 
-- [ ] Secure API endpoint
-- [ ] AI API key stored server-side
-- [ ] Request validation
-- [ ] Image validation
-- [ ] Upload limits
-- [ ] AI provider abstraction
-- [ ] AI response validation
-- [ ] Error handling
-- [ ] Rate limiting where practical
+- [x] Secure API endpoint
+- [x] AI API key stored server-side
+- [x] Request validation
+- [x] Image validation
+- [x] Upload limits
+- [x] AI provider abstraction
+- [x] AI response validation
+- [x] Error handling
+- [x] Rate limiting where practical
 
 ## AI
 
-- [ ] Vision-capable model
-- [ ] Structured extraction
-- [ ] Strict prompt
-- [ ] Uncertainty flags
-- [ ] No automatic importing
-- [ ] No conflict detection by AI
+- [x] Vision-capable model integration
+- [x] Structured extraction
+- [x] Strict prompt
+- [x] Uncertainty flags
+- [x] No automatic importing without user confirmation
+- [x] No conflict detection by AI
 
 ## Testing
 

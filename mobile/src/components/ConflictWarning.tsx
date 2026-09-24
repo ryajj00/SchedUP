@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { CourseConflict } from '../types/schedule';
-import { AppTheme, darkTheme, lightTheme } from '../theme';
+import { AppTheme, lightTheme } from '../theme';
 import { formatDisplayTime } from '../utils/timeUtils';
 
 interface ConflictWarningProps {

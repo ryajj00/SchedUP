@@ -1,10 +1,13 @@
 import { Link } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function OnboardingScreen() {
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 28, paddingBottom: insets.bottom + 28 }]}>
       <Text style={styles.eyebrow}>Welcome</Text>
       <Text style={styles.title}>Build your perfect class week.</Text>
       <Text style={styles.copy}>Add courses, scan your schedule, and catch clashes before they happen.</Text>
