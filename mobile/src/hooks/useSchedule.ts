@@ -1,92 +1,25 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext } from 'react';
 
-import { Course, CourseConflict } from '../types/schedule';
-import { findConflicts } from '../utils/conflictDetection';
-import { clearSchedule, getSchedule, saveSchedule } from '../storage/scheduleStorage';
+import type { Course, CourseConflict } from '../types/schedule';
+
+export interface ScheduleContextValue {
+  courses: Course[];
+  conflicts: CourseConflict[];
+  isLoading: boolean;
+  addCourse: (course: Omit<Course, 'id'>) => Promise<Course>;
+  addCourses: (courses: Omit<Course, 'id'>[]) => Promise<Course[]>;
+  updateCourse: (course: Course) => Promise<Course>;
+  deleteCourse: (courseId: string) => Promise<void>;
+  clearAll: () => Promise<void>;
+  refresh: () => Promise<void>;
+}
+
+export const ScheduleContext = createContext<ScheduleContextValue | null>(null);
 
 export function useSchedule() {
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const loadSchedule = useCallback(async () => {
-    setIsLoading(true);
-    const savedCourses = await getSchedule();
-    setCourses(savedCourses);
-    setIsLoading(false);
-  }, []);
-
-  const persistSchedule = useCallback(async (nextCourses: Course[]) => {
-    await saveSchedule(nextCourses);
-    setCourses(nextCourses);
-  }, []);
-
-  useEffect(() => {
-    const loadTimer = setTimeout(() => {
-      void loadSchedule();
-    }, 0);
-
-    return () => clearTimeout(loadTimer);
-  }, [loadSchedule]);
-
-  const addCourse = useCallback(
-    async (course: Omit<Course, 'id'>) => {
-      const newCourse: Course = {
-        ...course,
-        id: `course-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      };
-
-      const nextCourses = [...courses, newCourse];
-      await persistSchedule(nextCourses);
-      return newCourse;
-    },
-    [courses, persistSchedule],
-  );
-
-  const addCourses = useCallback(
-    async (courseInputs: Omit<Course, 'id'>[]) => {
-      const newCourses = courseInputs.map((course) => ({
-        ...course,
-        id: `course-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      }));
-      await persistSchedule([...courses, ...newCourses]);
-      return newCourses;
-    },
-    [courses, persistSchedule],
-  );
-
-  const updateCourse = useCallback(
-    async (updatedCourse: Course) => {
-      const nextCourses = courses.map((course) => (course.id === updatedCourse.id ? updatedCourse : course));
-      await persistSchedule(nextCourses);
-      return updatedCourse;
-    },
-    [courses, persistSchedule],
-  );
-
-  const deleteCourse = useCallback(
-    async (courseId: string) => {
-      const nextCourses = courses.filter((course) => course.id !== courseId);
-      await persistSchedule(nextCourses);
-    },
-    [courses, persistSchedule],
-  );
-
-  const clearAll = useCallback(async () => {
-    await clearSchedule();
-    setCourses([]);
-  }, []);
-
-  const conflicts = useMemo<CourseConflict[]>(() => findConflicts(courses), [courses]);
-
-  return {
-    courses,
-    conflicts,
-    isLoading,
-    addCourse,
-    addCourses,
-    updateCourse,
-    deleteCourse,
-    clearAll,
-    refresh: loadSchedule,
-  };
+  const context = useContext(ScheduleContext);
+  if (!context) {
+    throw new Error('useSchedule must be used within ScheduleProvider.');
+  }
+  return context;
 }

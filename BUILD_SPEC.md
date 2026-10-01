@@ -29,12 +29,15 @@ The current MVP implementation includes:
 - Timetable image selection from the gallery or camera
 - Image preview, backend scan review, uncertainty indicators, and user-confirmed import
 - Persisted light/dark theme preference
-- Stitch-based Settings screen with persisted time format, conflict-engine, transit-buffer, and duplicate-import preferences
+- Theme-aware bottom navigation and shared live preference state
+- Student profile editing for academic context, study preferences, notification preferences, and accessibility options
+- Student-friendly Settings screen with persisted time format, conflict-engine, transit-buffer, and duplicate-import preferences
+- Editable scanned-course review with duplicate-aware import
 - Two-step local schedule reset action
 - Backend request validation, image validation, rate limiting, and AI response validation
 - Configurable mock and OpenAI vision providers
 
-Remaining roadmap items are individual scanned-course editing/removal, applying duplicate preferences during import, Claude provider support, export/calendar actions, and production deployment/authentication.
+Remaining roadmap items are active-hours-aware study planning, functioning notifications, Claude provider support, export/calendar actions, calendar integration, and production deployment/authentication.
 
 ## Target Platforms
 

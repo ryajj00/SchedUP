@@ -21,6 +21,8 @@ export function DaySelector({ selectedDays, onToggle, theme = lightTheme }: DayS
         return (
           <Pressable
             key={day}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: isSelected }}
             onPress={() => onToggle(day)}
             style={[
               styles.chip,
@@ -43,6 +45,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   chip: {
+    minHeight: 40,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,

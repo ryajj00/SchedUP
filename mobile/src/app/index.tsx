@@ -6,25 +6,27 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CourseCard } from '../components/CourseCard';
 import { ConflictWarning } from '../components/ConflictWarning';
 import { QuickFilterBar, ScheduleFilter } from '../components/QuickFilterBar';
-import { ThemeToggle } from '../components/ThemeToggle';
 import { useSchedule } from '../hooks/useSchedule';
 import { usePreferences } from '../hooks/usePreferences';
 import { darkTheme, lightTheme } from '../theme';
 import { Day } from '../types/schedule';
 
-const DAY_ORDER: Day[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const MONDAY_FIRST: Day[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const SUNDAY_FIRST: Day[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function ScheduleScreen() {
   const [activeFilter, setActiveFilter] = useState<ScheduleFilter>('All');
   const insets = useSafeAreaInsets();
   const systemScheme = useColorScheme();
-  const { preferences, setThemeMode } = usePreferences();
+  const { preferences } = usePreferences();
+  const semesterLabel = preferences.studentProfile.semesterDates || 'Current semester';
   const isDarkMode = preferences.themeMode === 'dark' || (preferences.themeMode === 'system' && systemScheme === 'dark');
   const theme = isDarkMode ? darkTheme : lightTheme;
 
   const { courses, conflicts, isLoading } = useSchedule();
 
   const courseMap = useMemo(() => new Map(courses.map((course) => [course.id, course])), [courses]);
+  const dayOrder = preferences.studentProfile.weekStartDay === 'Sunday' ? SUNDAY_FIRST : MONDAY_FIRST;
 
   const visibleCourses = useMemo(() => {
     if (activeFilter === 'Conflicts') {
@@ -46,7 +48,7 @@ export default function ScheduleScreen() {
     return courses;
   }, [activeFilter, conflicts, courses]);
 
-  const daySections = DAY_ORDER.map((day) => ({
+  const daySections = dayOrder.map((day) => ({
     day,
     items: [...visibleCourses]
       .filter((course) => course.days.includes(day))
@@ -86,7 +88,7 @@ export default function ScheduleScreen() {
               <Text style={styles.brandMarkText}>S</Text>
             </View>
             <Text style={[styles.brand, { color: theme.primary }]}>SchedUP</Text>
-            <Text style={[styles.semester, { backgroundColor: theme.surfaceAlt, color: theme.textSoft }]}>Fall 2025</Text>
+            <Text style={[styles.semester, { backgroundColor: theme.surfaceAlt, color: theme.textSoft }]}>{semesterLabel}</Text>
           </View>
           <View style={styles.statusRow}>
             <View style={styles.statusDot} />
@@ -95,12 +97,11 @@ export default function ScheduleScreen() {
         </View>
         <View style={styles.headerActions}>
           {conflicts.length > 0 ? <Text style={[styles.conflictBadge, { backgroundColor: theme.dangerSoft, color: theme.danger }]}>{conflicts.length} Conflicts</Text> : null}
-          <ThemeToggle isDark={isDarkMode} onToggle={() => void setThemeMode(isDarkMode ? 'light' : 'dark')} />
         </View>
       </View>
 
       <View style={styles.quickRow}>
-        <Text style={[styles.semesterPill, { backgroundColor: theme.surfaceAlt, color: theme.primary }]}>↻  Fall 2025</Text>
+        <Text style={[styles.semesterPill, { backgroundColor: theme.surfaceAlt, color: theme.primary }]}>↻  {semesterLabel}</Text>
         <View style={styles.quickActions}>
           <Link href="/scan-review" asChild>
             <Pressable style={StyleSheet.flatten([styles.scanButton, { backgroundColor: theme.surfaceAlt }])}>
@@ -120,8 +121,8 @@ export default function ScheduleScreen() {
       {warningMessages.length > 0 ? (
         <View style={styles.warningBlock}>
           <View style={[styles.conflictBanner, { backgroundColor: theme.dangerSoft }]}>
-            <Text style={[styles.warningTitle, { color: theme.danger }]}>⚠ {conflicts.length} Collision{conflicts.length === 1 ? '' : 's'} Detected</Text>
-            <Text style={[styles.warningBody, { color: theme.textSoft }]}>Review overlapping classes before your week gets messy.</Text>
+            <Text style={[styles.warningTitle, { color: theme.danger }]}>⚠ {conflicts.length} Schedule Alert{conflicts.length === 1 ? '' : 's'}</Text>
+            <Text style={[styles.warningBody, { color: theme.textSoft }]}>Check for overlapping classes or a short break between classes.</Text>
           </View>
           {warningMessages.map((warning) => (
             <ConflictWarning
@@ -163,6 +164,8 @@ export default function ScheduleScreen() {
                 course={course}
                 conflicts={conflicts}
                 theme={theme}
+                colorCoding={preferences.colorCodingBySubject}
+                compact={preferences.compactView}
                 onPress={() => router.push({ pathname: '/course-form', params: { courseId: course.id } })}
               />
             ))}

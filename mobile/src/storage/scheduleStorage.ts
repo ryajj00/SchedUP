@@ -1,17 +1,70 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { Course } from '../types/schedule';
+import { Course, TransitBufferMinutes } from '../types/schedule';
 
 const STORAGE_KEY = '@schedUp/schedule';
 export const PREFERENCES_KEY = '@schedUp/preferences';
+
+export interface StudentProfile {
+  fullName: string;
+  school: string;
+  program: string;
+  yearLevel: string;
+  semesterDates: string;
+  classLoadType: 'regular' | 'irregular';
+  timezone: string;
+  weekStartDay: 'Sunday' | 'Monday';
+  activeHoursStart: string;
+  activeHoursEnd: string;
+  doNotScheduleStart: string;
+  doNotScheduleEnd: string;
+  sleepWindowStart: string;
+  sleepWindowEnd: string;
+  peakFocusTime: 'Morning' | 'Afternoon' | 'Evening' | 'Night';
+  commuteBufferMinutes: TransitBufferMinutes;
+  studySessionMinutes: number;
+  breakMinutes: number;
+  reminderLeadTimeMinutes: number;
+  notificationChannels: ('push' | 'email')[];
+  quietHoursStart: string;
+  quietHoursEnd: string;
+}
 
 export interface AppPreferences {
   themeMode: 'system' | 'light' | 'dark';
   timeFormat: '12h' | '24h';
   allowBackToBack: boolean;
-  transitBufferMinutes: 0 | 10 | 15;
+  transitBufferMinutes: TransitBufferMinutes;
   autoMergeDuplicates: boolean;
+  colorCodingBySubject: boolean;
+  compactView: boolean;
+  studentProfile: StudentProfile;
 }
+
+export const DEFAULT_STUDENT_PROFILE: StudentProfile = {
+  fullName: '',
+  school: '',
+  program: '',
+  yearLevel: '',
+  semesterDates: '',
+  classLoadType: 'regular',
+  timezone: 'Asia/Manila',
+  weekStartDay: 'Monday',
+  activeHoursStart: '08:00',
+  activeHoursEnd: '22:00',
+  doNotScheduleStart: '12:00',
+  doNotScheduleEnd: '13:00',
+  sleepWindowStart: '23:00',
+  sleepWindowEnd: '06:00',
+  peakFocusTime: 'Morning',
+  commuteBufferMinutes: 10,
+  studySessionMinutes: 60,
+  breakMinutes: 15,
+  reminderLeadTimeMinutes: 30,
+  notificationChannels: ['push', 'email'],
+  quietHoursStart: '22:00',
+  quietHoursEnd: '07:00',
+};
 
 export const DEFAULT_PREFERENCES: AppPreferences = {
   themeMode: 'system',
@@ -19,6 +72,9 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   allowBackToBack: true,
   transitBufferMinutes: 10,
   autoMergeDuplicates: true,
+  colorCodingBySubject: true,
+  compactView: false,
+  studentProfile: DEFAULT_STUDENT_PROFILE,
 };
 
 export async function getSchedule(): Promise<Course[]> {
@@ -70,7 +126,7 @@ export async function getPreferences(): Promise<AppPreferences> {
       return DEFAULT_PREFERENCES;
     }
 
-    const parsed = JSON.parse(value) as Partial<AppPreferences> & { darkMode?: boolean };
+    const parsed = JSON.parse(value) as Partial<AppPreferences> & { darkMode?: boolean; studentProfile?: Partial<StudentProfile> };
     const themeMode =
       parsed.themeMode === 'light' || parsed.themeMode === 'dark' || parsed.themeMode === 'system'
         ? parsed.themeMode
@@ -79,9 +135,20 @@ export async function getPreferences(): Promise<AppPreferences> {
           : DEFAULT_PREFERENCES.themeMode;
     const timeFormat = parsed.timeFormat === '24h' ? '24h' : DEFAULT_PREFERENCES.timeFormat;
     const transitBufferMinutes =
-      parsed.transitBufferMinutes === 0 || parsed.transitBufferMinutes === 15
+      parsed.transitBufferMinutes === 0 || parsed.transitBufferMinutes === 10 || parsed.transitBufferMinutes === 15 || parsed.transitBufferMinutes === 30
         ? parsed.transitBufferMinutes
         : DEFAULT_PREFERENCES.transitBufferMinutes;
+
+    const studentProfile: StudentProfile = {
+      ...DEFAULT_STUDENT_PROFILE,
+      ...parsed.studentProfile,
+      commuteBufferMinutes: transitBufferMinutes,
+      notificationChannels: Array.isArray(parsed.studentProfile?.notificationChannels)
+        ? parsed.studentProfile!.notificationChannels.filter(
+            (channel): channel is 'push' | 'email' => channel === 'push' || channel === 'email',
+          )
+        : DEFAULT_STUDENT_PROFILE.notificationChannels,
+    };
 
     return {
       themeMode,
@@ -89,6 +156,9 @@ export async function getPreferences(): Promise<AppPreferences> {
       allowBackToBack: parsed.allowBackToBack !== false,
       transitBufferMinutes,
       autoMergeDuplicates: parsed.autoMergeDuplicates !== false,
+      colorCodingBySubject: parsed.colorCodingBySubject !== false,
+      compactView: Boolean(parsed.compactView),
+      studentProfile,
     };
   } catch (error) {
     console.warn('Failed to load preferences:', error);

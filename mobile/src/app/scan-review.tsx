@@ -1,11 +1,12 @@
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, useColorScheme, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useSchedule } from '../hooks/useSchedule';
 import { usePreferences } from '../hooks/usePreferences';
+import { DaySelector } from '../components/DaySelector';
 import { scanSchedule } from '../services/scanService';
 import { darkTheme, lightTheme } from '../theme';
 import { ScannedCourse } from '../types/schedule';
@@ -19,8 +20,21 @@ export default function ScanReviewScreen() {
   const [items, setItems] = useState<ScannedCourse[]>([]);
   const [image, setImage] = useState<{ uri: string; dataUrl: string; mimeType: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
-  const { addCourses } = useSchedule();
+  const { courses, isLoading: isScheduleLoading, addCourses } = useSchedule();
+
+  const updateItem = (index: number, updates: Partial<ScannedCourse>) => {
+    setItems((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...updates } : item));
+  };
+
+  const toggleItemDay = (index: number, day: ScannedCourse['days'][number]) => {
+    const item = items[index];
+    if (!item) return;
+    updateItem(index, {
+      days: item.days.includes(day) ? item.days.filter((selected) => selected !== day) : [...item.days, day],
+    });
+  };
 
   const setPickedImage = (result: ImagePicker.ImagePickerResult) => {
     if (result.canceled || !result.assets[0]?.uri) {
@@ -102,17 +116,57 @@ export default function ScanReviewScreen() {
       return;
     }
 
+    const hasInvalidCourse = items.some((course) => {
+      const timePattern = /^([01]\d|2[0-3]):([0-5]\d)$/;
+      if (!course.courseName.trim() || course.days.length === 0 || !timePattern.test(course.startTime) || !timePattern.test(course.endTime)) {
+        return true;
+      }
+
+      return course.endTime <= course.startTime;
+    });
+    if (hasInvalidCourse) {
+      setError('Check each class name, day, and time before adding it.');
+      return;
+    }
+
+    setIsSaving(true);
     try {
-      await addCourses(items.map((course) => ({
+      const getDuplicateKey = (course: Pick<ScannedCourse, 'courseName' | 'days' | 'startTime' | 'endTime'>) =>
+        `${course.courseName.trim().toLowerCase()}|${[...course.days].sort().join(',')}|${course.startTime}|${course.endTime}`;
+      const existingKeys = new Set(courses.map(getDuplicateKey));
+      const coursesToAdd = preferences.autoMergeDuplicates
+        ? items.filter((course) => {
+            const key = getDuplicateKey(course);
+            if (existingKeys.has(key)) return false;
+            existingKeys.add(key);
+            return true;
+          })
+        : items;
+
+      if (!coursesToAdd.length) {
+        setError('These classes are already in your schedule.');
+        return;
+      }
+
+      await addCourses(coursesToAdd.map((course) => ({
           courseName: course.courseName,
           days: course.days,
           startTime: course.startTime,
           endTime: course.endTime,
           source: 'scan',
         })));
-      router.replace('/');
+      const duplicatesSkipped = items.length - coursesToAdd.length;
+      if (duplicatesSkipped > 0) {
+        Alert.alert('Schedule updated', `${coursesToAdd.length} ${coursesToAdd.length === 1 ? 'class was' : 'classes were'} added. ${duplicatesSkipped} duplicate ${duplicatesSkipped === 1 ? 'was' : 'were'} skipped.`, [
+          { text: 'Done', onPress: () => router.replace('/') },
+        ]);
+      } else {
+        router.replace('/');
+      }
     } catch (confirmError) {
       setError(confirmError instanceof Error ? confirmError.message : 'Unable to save scanned courses.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -123,10 +177,10 @@ export default function ScanReviewScreen() {
     >
       <View style={styles.pageHeader}>
         <View>
-          <Text style={[styles.title, { color: theme.text }]}>Review Scanned Schedule</Text>
-          <Text style={[styles.subtitle, { color: theme.textSoft }]}>✦ AI extraction assistant</Text>
+          <Text style={[styles.title, { color: theme.text }]}>Add from a timetable</Text>
+          <Text style={[styles.subtitle, { color: theme.textSoft }]}>Choose a photo, then check each class before saving.</Text>
         </View>
-        <Text style={[styles.stepPill, { backgroundColor: theme.surfaceAlt, color: theme.textSoft }]}>Step 2 of 2</Text>
+        <Text style={[styles.stepPill, { backgroundColor: theme.surfaceAlt, color: theme.textSoft }]}>{items.length ? 'Review' : image ? 'Ready' : 'Step 1'}</Text>
       </View>
 
       <View style={styles.actionRow}>
@@ -138,12 +192,19 @@ export default function ScanReviewScreen() {
         </Pressable>
       </View>
 
-      {image ? <Image source={{ uri: image.uri }} style={styles.preview} accessibilityLabel="Selected timetable" /> : null}
+      {image ? (
+        <Image source={{ uri: image.uri }} style={styles.preview} accessibilityLabel="Selected timetable" />
+      ) : (
+        <View style={[styles.emptyState, { backgroundColor: theme.surface, borderColor: theme.cardStroke }]}>
+          <Text style={[styles.emptyTitle, { color: theme.text }]}>Start with a clear photo</Text>
+          <Text style={[styles.meta, { color: theme.textSoft }]}>Make sure class names, days, and times are easy to read.</Text>
+        </View>
+      )}
       {error ? <Text style={[styles.error, { color: theme.danger }]}>{error}</Text> : null}
 
-      {items.map((course) => (
+      {items.map((course, index) => (
         <View
-          key={`${course.courseName}-${course.startTime}`}
+          key={`scanned-course-${index}`}
           style={[
             styles.courseCard,
             { backgroundColor: theme.surface, borderColor: course.uncertain ? '#F4C9A5' : theme.cardStroke },
@@ -151,12 +212,34 @@ export default function ScanReviewScreen() {
           ]}
         >
           <View style={styles.headerRow}>
-            <Text style={[styles.courseName, { color: theme.text }]}>{course.courseName}</Text>
+            <TextInput
+              value={course.courseName}
+              onChangeText={(courseName) => updateItem(index, { courseName })}
+              placeholder="Course name"
+              placeholderTextColor={theme.textMuted}
+              accessibilityLabel="Course name"
+              style={[styles.editInput, styles.courseName, { color: theme.text, borderColor: theme.cardStroke }]}
+            />
             {course.uncertain ? <Text style={[styles.warning, { color: theme.warning }]}>⚠</Text> : <Text style={[styles.confirmed, { color: theme.success }]}>✓</Text>}
           </View>
 
-          <Text style={[styles.meta, { color: theme.textSoft }]}>{course.days.join(' • ')}</Text>
-          <Text style={[styles.meta, { color: theme.textSoft }]}>{course.startTime} – {course.endTime}</Text>
+          <Text style={[styles.meta, { color: theme.textSoft }]}>Class days</Text>
+          <DaySelector selectedDays={course.days} onToggle={(day) => toggleItemDay(index, day)} theme={theme} />
+          <View style={styles.timeRow}>
+            <TextInput
+              value={course.startTime}
+              onChangeText={(startTime) => updateItem(index, { startTime })}
+              accessibilityLabel="Class start time"
+              style={[styles.editInput, styles.timeInput, { color: theme.text, borderColor: theme.cardStroke }]}
+            />
+            <Text style={[styles.meta, { color: theme.textSoft }]}>to</Text>
+            <TextInput
+              value={course.endTime}
+              onChangeText={(endTime) => updateItem(index, { endTime })}
+              accessibilityLabel="Class end time"
+              style={[styles.editInput, styles.timeInput, { color: theme.text, borderColor: theme.cardStroke }]}
+            />
+          </View>
 
           {course.uncertain ? (
             <Text style={[styles.reviewText, { color: theme.warning }]}>Needs review</Text>
@@ -167,15 +250,27 @@ export default function ScanReviewScreen() {
           {course.uncertaintyReason ? (
             <Text style={[styles.reason, { color: theme.warning }]}>{course.uncertaintyReason}</Text>
           ) : null}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Remove ${course.courseName}`}
+            onPress={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+            style={styles.removeButton}
+          >
+            <Text style={[styles.removeText, { color: theme.danger }]}>Remove class</Text>
+          </Pressable>
         </View>
       ))}
 
-      <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={handleAnalyze} disabled={isLoading}>
+      <Pressable style={[styles.primaryButton, { backgroundColor: theme.primary, opacity: !image || isLoading ? 0.55 : 1 }]} onPress={handleAnalyze} disabled={!image || isLoading}>
         {isLoading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Analyze timetable</Text>}
       </Pressable>
       {items.length > 0 ? (
-        <Pressable style={[styles.confirmButton, { backgroundColor: theme.success }]} onPress={() => void handleConfirm()}>
-          <Text style={styles.primaryButtonText}>Add courses to schedule</Text>
+        <Pressable
+          style={[styles.confirmButton, { backgroundColor: theme.success, opacity: isScheduleLoading ? 0.55 : 1 }]}
+          onPress={() => void handleConfirm()}
+          disabled={isScheduleLoading || isSaving}
+        >
+            <Text style={styles.primaryButtonText}>{isSaving ? 'Saving classes…' : `Add ${items.length} ${items.length === 1 ? 'class' : 'classes'} to schedule`}</Text>
         </Pressable>
       ) : null}
     </ScrollView>
@@ -205,4 +300,11 @@ const styles = StyleSheet.create({
   secondaryButtonText: { fontWeight: '800' },
   preview: { width: '100%', height: 180, borderRadius: 16, marginBottom: 12, resizeMode: 'cover' },
   confirmButton: { marginTop: 10, borderRadius: 16, paddingVertical: 12, alignItems: 'center' },
+  emptyState: { borderRadius: 18, borderWidth: 1, padding: 20, marginBottom: 12, gap: 6 },
+  emptyTitle: { fontSize: 17, fontWeight: '800' },
+  editInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 9, fontSize: 15 },
+  timeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
+  timeInput: { flex: 1 },
+  removeButton: { alignSelf: 'flex-start', paddingVertical: 10, marginTop: 4 },
+  removeText: { fontSize: 13, fontWeight: '700' },
 });

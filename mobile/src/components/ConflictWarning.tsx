@@ -25,10 +25,16 @@ export function ConflictWarning({
   return (
     <View style={[styles.container, { backgroundColor: theme.dangerSoft, borderColor: theme.danger }]}>
       <Text style={[styles.title, { color: theme.danger }]}>⚠ Conflict</Text>
-      <Text style={[styles.message, { color: theme.text }]}>{courseName} overlaps with {otherCourseName}</Text>
+      <Text style={[styles.message, { color: theme.text }]}>
+        {conflict.reason === 'travel-buffer'
+          ? `${courseName} and ${otherCourseName} have less break time than your travel buffer.`
+          : conflict.reason === 'back-to-back'
+            ? `${courseName} and ${otherCourseName} are back-to-back.`
+            : `${courseName} overlaps with ${otherCourseName}.`}
+      </Text>
       <Text style={[styles.meta, { color: theme.textSoft }]}>{conflict.day}</Text>
       <Text style={[styles.meta, { color: theme.textSoft }]}>{formatDisplayTime(startTime)} – {formatDisplayTime(endTime)}</Text>
-      <Text style={[styles.meta, { color: theme.textSoft }]}>Choose a better time or review the clash.</Text>
+      <Text style={[styles.meta, { color: theme.textSoft }]}>Edit a class to resolve this schedule conflict.</Text>
     </View>
   );
 }
